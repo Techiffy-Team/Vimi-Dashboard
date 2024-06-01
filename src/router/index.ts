@@ -20,7 +20,7 @@ const router = createRouter({
       component: () => import('@/pages/Dashboard.vue'),
       children: [
         {
-          path: '',
+          path: '/',
           name: 'dashboard',
           component: () => import('@/pages/DashboardView.vue'),
           meta: {
@@ -28,12 +28,12 @@ const router = createRouter({
           },
         },
         {
-          path: 'products',
-          name: 'products',
+          path: 'listing',
+          name: 'listing',
           component: () => import('@/pages/products/Listing.vue'),
           meta: {
-            title: 'Products',
-          }
+            title: 'Listing',
+          },
         },
         {
           path: 'add-product',
@@ -41,7 +41,7 @@ const router = createRouter({
           component: () => import('@/pages/products/AddProducts.vue'),
           meta: {
             title: 'Add Product',
-          }
+          },
         },
       ],
     },
