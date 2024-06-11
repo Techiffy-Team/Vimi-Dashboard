@@ -25,7 +25,7 @@ export default [
       {
         name: 'Customers',
         icon: 'customers',
-        // path: { name: "users" },
+        path: { name: 'customers' },
       },
       {
         name: 'Tickets',
@@ -56,7 +56,6 @@ export default [
         name: 'Log out',
         icon: 'logout',
         action: 'logout',
-        // path: { name: 'logout' },
       },
     ],
   },
