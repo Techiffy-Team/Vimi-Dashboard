@@ -37,7 +37,15 @@ const router = createRouter({
           },
         },
         {
-          path: 'view-product',
+          path: 'edit-product/:id',
+          name: 'edit-product',
+          component: () => import('@/pages/products/Add.vue'),
+          meta: {
+            title: 'Edit Product',
+          },
+        },
+        {
+          path: 'view-product/:id',
           name: 'view-product',
           component: () => import('@/pages/products/View.vue'),
           meta: {
@@ -58,6 +66,14 @@ const router = createRouter({
           component: () => import('@/pages/categories/Add.vue'),
           meta: {
             title: 'Add Category',
+          },
+        },
+        {
+          path: 'edit-category/:id',
+          name: 'edit-category',
+          component: () => import('@/pages/categories/Add.vue'),
+          meta: {
+            title: 'Edit Category',
           },
         },
         {

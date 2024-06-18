@@ -1,6 +1,4 @@
 <script setup>
-['headers', 'items', 'itemValue'];
-
 const props = defineProps({
   isPageLoading: {
     type: Boolean,
@@ -29,9 +27,13 @@ const props = defineProps({
 });
 
 const router = useRouter();
+const route = useRoute();
 
 const viewDetails = (...event) => {
-  router.push({ name: 'view-category', params: { id: event[1]?.item.uuid } });
+  router.push({
+    name: `view-${props.routeDir}`,
+    params: { id: event[1]?.item.uuid },
+  });
 };
 
 const dateFormattinmg = (date) => {
@@ -177,29 +179,6 @@ const items = [
   // ... more items
 ];
 
-const headers = [
-  {
-    key: 'exclusive',
-    sortable: false,
-    removable: false,
-    align: 'center',
-  },
-  { title: 'SKU', key: 'SKU', align: 'left', sortable: false },
-  {
-    title: 'Product',
-    key: 'Product',
-    align: 'left',
-    sortable: true,
-    width: 250,
-  },
-  { title: 'Category', key: 'Category', ralign: 'center', sortable: true },
-  { title: 'Type', key: 'Type', align: 'left', sortable: false },
-  { title: 'Qty', key: 'Qty', align: 'left', sortable: false },
-  { title: 'Price', key: 'Price', align: 'left', sortable: true },
-  { title: 'Visability', key: 'Visability', align: 'left', sortable: true },
-  { key: 'actions', align: 'center', sortable: false },
-];
-
 const orderStatus = ref([
   { nameAr: 'قيد الانتظار', nameEn: 'Pending' },
   {
@@ -322,6 +301,11 @@ const openDeleteModal = ({ uuid }) => {
     },
   });
 };
+
+const handleGoTOAction = ({ uuid }, action) => {
+  const type = route.path.includes('products') ? 'product' : 'category';
+  router.push({ name: `${action}-${type}`, params: { id: uuid } });
+};
 </script>
 
 <template>
@@ -334,7 +318,7 @@ const openDeleteModal = ({ uuid }) => {
       class="listin-table"
       :headers="headerLocal"
       :items="itemsLocal"
-      :item-value="itemValue ?? 'SKU'"
+      :item-value="itemValue"
       show-select
       :items-per-page="10"
       hide-default-footer
@@ -398,53 +382,50 @@ const openDeleteModal = ({ uuid }) => {
         </div>
       </template>
 
-      <template v-slot:item.Price="{ item }">
+      <template v-slot:item.price="{ item }">
         <div class="d-flex">
           <p class="price text-subtitle-1">
-            {{ item.Price }}
+            KD
+            {{ item.price }}
           </p>
         </div>
       </template>
 
-      <template v-slot:item.Qty="{ item }">
+      <template v-slot:item.stockQuantity="{ item }">
         <div class="d-flex">
-          <p class="QTY text-subtitle-1" :class="item.Qty <= 10 ? 'low' : ''">
-            {{ item.Qty }}
+          <p
+            class="QTY text-subtitle-1"
+            :class="item.stockQuantity <= 10 ? 'low' : ''"
+          >
+            {{ item.stockQuantity }}
           </p>
         </div>
       </template>
 
-      <template v-slot:item.Type="{ item }">
+      <template v-slot:item.type="{ item }">
         <div class="d-flex">
           <p class="type text-subtitle-1">
-            {{ item.Type }}
+            {{ item.type }}
           </p>
         </div>
       </template>
 
-      <template v-slot:item.Category="{ item }">
-        <div class="d-flex">
+      <template v-slot:item.categoryName="{ item }">
+        <div class="d-flex align-center justify-center">
           <p class="category text-subtitle-1">
-            {{ item.Category }}
-          </p>
-        </div>
-      </template>
-
-      <template v-slot:item.Product="{ item }">
-        <div class="d-flex align-center">
-          <img src="@/assets/svgs/product.svg" alt="product" />
-          <p class="product text-subtitle-1 ml-2">
-            {{ item.Product }}
+            {{ item.categoryName }}
           </p>
         </div>
       </template>
       <template v-slot:item.displayName_En="{ item }">
         <div class="d-flex align-center">
-          <img
-            style="width: 38px; height: 38px"
-            :src="`https://techify-001-site1.htempurl.com${item.imagePath}`"
-            alt="product"
-          />
+          <div v-if="item.imagePath || item.images.length">
+            <img
+              style="width: 38px; height: 38px"
+              :src="`https://techify-001-site1.htempurl.com${item.imagePath ? item.imagePath : item.images[0]?.imagePath}`"
+              alt="product"
+            />
+          </div>
           <p class="product text-subtitle-1 ml-2">
             {{ item.displayName_En }}
           </p>
@@ -460,10 +441,10 @@ const openDeleteModal = ({ uuid }) => {
         </div>
       </template>
 
-      <template v-slot:item.SKU="{ item }">
+      <template v-slot:item.sku="{ item }">
         <div class="d-flex">
           <p class="SKU text-subtitle-1">
-            {{ item.SKU }}
+            {{ item.sku }}
           </p>
         </div>
       </template>
@@ -533,21 +514,60 @@ const openDeleteModal = ({ uuid }) => {
       </template>
 
       <template v-slot:item.actions="{ item }">
-        <div class="d-flex">
-          <editIcon
-            class="mx-auto my-auto cursor-pointer me-1"
-            :color="'#AFAACB'"
-            :width="20"
-            :height="20"
-          />
-          <deleteIcon
-            class="mx-auto my-auto cursor-pointer"
-            :color="'#AFAACB'"
-            :width="20"
-            :height="20"
-            @click.stop="openDeleteModal(item)"
-          />
-        </div>
+        <v-menu>
+          <template v-slot:activator="{ props }">
+            <v-btn flat v-bind="props">
+              <v-icon>mdi-dots-horizontal </v-icon>
+            </v-btn>
+          </template>
+          <v-list>
+            <v-list-item class="px-0">
+              <v-btn
+                @click.stop="handleGoTOAction(item, 'edit')"
+                class="d-flex w-100 justify-start px-5"
+                flat
+              >
+                <editIcon
+                  class="my-auto cursor-pointer me-2"
+                  :color="'#AFAACB'"
+                  :width="20"
+                  :height="20"
+                />
+                <p>Edit</p>
+              </v-btn>
+            </v-list-item>
+            <v-list-item class="px-0">
+              <v-btn
+                @click.stop="openDeleteModal(item)"
+                class="d-flex w-100 justify-start px-5"
+                flat
+              >
+                <deleteIcon
+                  class="my-auto cursor-pointer me-2"
+                  :color="'#AFAACB'"
+                  :width="20"
+                  :height="20"
+                />
+                <p>Delete</p>
+              </v-btn>
+            </v-list-item>
+            <v-list-item class="px-0">
+              <v-btn
+                class="d-flex w-100 justify-start px-5"
+                flat
+                @click.stop="handleGoTOAction(item, 'view')"
+              >
+                <ViewIcon
+                  class="my-auto cursor-pointer me-2"
+                  :color="'#AFAACB'"
+                  :width="20"
+                  :height="20"
+                />
+                <p>View Details</p>
+              </v-btn>
+            </v-list-item>
+          </v-list>
+        </v-menu>
       </template>
     </v-data-table>
   </div>

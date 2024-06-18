@@ -3,7 +3,9 @@ import router from '@/router';
 const axiosIns = axios.create({
   baseURL: 'https://techify-001-site1.htempurl.com/api/v1/',
   // timeout: 2000,
-  headers: { 'x-api-key': 'x5b9j8p2qRz3vdK1st7yf4ul6wa0ezcv' },
+  headers: {
+    'x-api-key': 'x5b9j8p2qRz3vdK1st7yf4ul6wa0ezcv',
+  },
 });
 
 axiosIns.interceptors.request.use((config) => {
@@ -33,8 +35,10 @@ axiosIns.interceptors.response.use(
     // If the response has a 401 status code, handle the unauthorized request
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('accessToken');
-      localStorage.removeItem('userData');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
       router.push('/');
+      window.location.reload();
     }
 
     // For other errors, reject the promise and pass the error along
