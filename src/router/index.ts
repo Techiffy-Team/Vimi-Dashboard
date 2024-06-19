@@ -125,14 +125,6 @@ const router = createRouter({
           },
         },
         {
-          path: 'view-customer',
-          name: 'view-customer',
-          component: () => import('@/pages/customers/View.vue'),
-          meta: {
-            title: 'View Customer',
-          },
-        },
-        {
           path: 'add-customers',
           name: 'add-customers',
           component: () => import('@/pages/customers/Add.vue'),
@@ -146,6 +138,14 @@ const router = createRouter({
           component: () => import('@/pages/tickets/List.vue'),
           meta: {
             title: 'Tickets',
+          },
+        },
+        {
+          path: "view-ticket",
+          name: "view-ticket",
+          component: () => import('@/pages/tickets/View.vue'),
+          meta: {
+            title: 'Ticket Details',
           },
         }
       ],
