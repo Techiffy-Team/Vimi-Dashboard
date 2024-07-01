@@ -27,8 +27,8 @@ const service = reqMethods.reduce((acc: any, method: string) => {
 }, {});
 
 export const resource = (resourceUrl: string) => ({
-  get(param = {}) {
-    return service.get(resourceUrl, { param });
+  get(param = "") {
+    return service.get(`${resourceUrl}${param}`);
   },
   show(id: string) {
     return service.get(`${resourceUrl}/${id}`);
@@ -44,7 +44,7 @@ export const resource = (resourceUrl: string) => ({
     }
     return service.post(`${resourceUrl}/${id}`, data);
   },
-  replace(data: any) {
+  replace(data = {}) {
     return service.put(resourceUrl, data);
   },
   remove(id: string) {

@@ -1,12 +1,19 @@
 <template>
   <section class="add-products px-6">
-    <VContainer>
+    <BaseNotifications
+      :notification="showToast"
+      :notificationText="notification.text"
+      :color="notification.color"
+      @closeNotification="showToast = false"
+    />
+    <VContainer class="pt-0">
       <VRow>
         <VCol cols="6">
           <VCol>
-            <VCard class="card card-info">
+            <v-skeleton-loader v-if="isPageLoading" type="card" />
+            <VCard flat v-else class="card pa-8">
               <h3 class="card-title">Main information</h3>
-              <VRow disable-gutters style="gap: 1rem">
+              <VRow disable-gutters style="gap: 1rem" class="mt-3">
                 <VCol cols="12">
                   <h4 class="card-info-title">Category name</h4>
                   <VTextField
@@ -25,9 +32,9 @@
                     v-model="newCategory.displayName_En"
                   />
                 </VCol>
-                <VCol cols="12">
+                <VCol cols="12" style="position: relative">
                   <h4 class="card-info-title">Description</h4>
-                  <v-textarea
+                  <!-- <v-textarea
                     label=""
                     density="compact"
                     placeholder="Write description"
@@ -40,6 +47,19 @@
                       font-weight: 400;
                     "
                     v-model="newCategory.description_En"
+                  /> -->
+                  <Editor
+                    theme="snow"
+                    toolbar="essentials"
+                    ref="description_En"
+                    placeholder="Write info"
+                    style="
+                      border: 1px solid #e8e7ef;
+                      border-radius: 8px;
+                      background: #faf9fe;
+                      height: 150px;
+                      margin-bottom: 0rem;
+                    "
                   />
                 </VCol>
               </VRow>
@@ -48,9 +68,10 @@
         </VCol>
         <VCol cols="6" style="direction: rtl">
           <VCol>
-            <VCard class="card card-info">
+            <v-skeleton-loader v-if="isPageLoading" type="card" />
+            <VCard flat v-else class="card pa-8">
               <h3 class="card-title">المعلومات الأساسية</h3>
-              <VRow disable-gutters style="gap: 1rem">
+              <VRow disable-gutters style="gap: 1rem" class="mt-3">
                 <VCol cols="12">
                   <h4 class="card-info-title">إسم الفئة</h4>
                   <VTextField
@@ -70,9 +91,13 @@
                     v-model="newCategory.displayName_Ar"
                   />
                 </VCol>
-                <VCol cols="12">
+                <VCol
+                  cols="12"
+                  style="position: relative"
+                  class="arabic-editor-container"
+                >
                   <h4 class="card-info-title">الوصف</h4>
-                  <v-textarea
+                  <!-- <v-textarea
                     label=""
                     density="compact"
                     placeholder="أدخل الوصف"
@@ -86,6 +111,21 @@
                       font-weight: 400;
                     "
                     v-model="newCategory.description_Ar"
+                  /> -->
+                  <Editor
+                    theme="snow"
+                    class="arabic-editor"
+                    toolbar="essentials"
+                    ref="description_Ar"
+                    placeholder="أدخل الوصف"
+                    style="
+                      border: 1px solid #e8e7ef;
+                      border-radius: 8px;
+                      background: #faf9fe;
+                      height: 150px;
+                      margin-bottom: 0rem;
+                      text-align: right;
+                    "
                   />
                 </VCol>
               </VRow>
@@ -93,9 +133,10 @@
           </VCol>
         </VCol>
         <VCol>
-          <VCard class="card card-tags" style="margin-bottom: 2rem">
+          <v-skeleton-loader v-if="isPageLoading" type="card" />
+          <VCard v-else class="card card-tags" style="margin-bottom: 2rem">
             <VRow>
-              <VCol class="d-flex justify-between">
+              <VCol class="d-flex justify-between pb-0">
                 <VTextField
                   label=""
                   density="compact"
@@ -128,14 +169,25 @@
                 </VBtn>
               </VCol>
 
-              <VCol cols="12" v-if="subCategoriesToAdd.length">
-                <VCard flat class="products-card px-4 py-4">
+              <VCol cols="12" class="pt-0">
+                <VCard
+                  flat
+                  class="products-card px-4 py-4"
+                  :style="{
+                    'min-height': subCategoriesToAdd.length
+                      ? 'fit-content'
+                      : '10rem',
+                  }"
+                >
                   <VCol
-                    class="d-flex justify-space-between pa-0 mb-3 pb-3"
-                    v-for="subCategory in subCategoriesToAdd"
+                    class="d-flex justify-space-between pa-0 py-2"
+                    v-for="(subCategory, index) in subCategoriesToAdd"
                     :key="subCategory.id"
                     :style="{
-                      borderBottom: '1px solid #E5E5E5',
+                      borderBottom:
+                        index != subCategoriesToAdd.length - 1
+                          ? '1px solid #E5E5E5'
+                          : 'none',
                     }"
                   >
                     <div class="d-flex justify-between">
@@ -170,15 +222,26 @@
       </VRow>
       <VRow>
         <VCol cols="4">
-          <VCard class="card card-products" style="margin-bottom: 1rem">
+          <v-skeleton-loader v-if="isPageLoading" type="card" />
+          <VCard flat v-else style="margin-bottom: 1rem" class="pa-8">
             <h3 class="card-title">Category Images</h3>
             <VCard flat>
               <VFileInput
                 label=""
+                ref="fileInput"
                 class="card-file-input"
                 prepend-icon="mdi-upload-multiple"
-              ></VFileInput>
-              <VCard class="card-file-ui ma-1">
+                @change="handleFileChange"
+              />
+              <VCard
+                :style="{
+                  border: categoryImg
+                    ? '1px solid var(--Purple, #733ee4)'
+                    : '1px dashed var(--Purple, #733ee4)',
+                }"
+                class="card-file-ui ma-1"
+                @click="fileInput.click()"
+              >
                 <div
                   style="
                     height: inherit;
@@ -189,16 +252,31 @@
                     justify-content: center;
                   "
                 >
-                  <img src="@/icons/upload.svg" style="cursor: pointer" />
-                  <img v-if="false" src="@/assets/multivitamin.png" />
-                  <p class="card-file-text text-decoration-underline">
-                    Upload Image
+                  <img
+                    v-if="categoryImg"
+                    width="142"
+                    height="142"
+                    :src="
+                      categoryImg.includes('http')
+                        ? categoryImg
+                        : `https://techify-001-site1.htempurl.com${categoryImg}`
+                    "
+                  />
+                  <img
+                    v-else
+                    src="@/icons/upload.svg"
+                    style="cursor: pointer"
+                  />
+                  <p
+                    class="card-file-text text-decoration-underline cursor-pointer"
+                  >
+                    {{ categoryImg ? 'Change Image' : 'Upload Image' }}
                   </p>
                   <div class="text-center">
                     <p class="card-file-subtitle my-1">
                       Max image 5MB jpg, png, jpeg
                     </p>
-                    <p class="card-file-subtitle">Dimention X*X (Square)</p>
+                    <p class="card-file-subtitle">Dimension X*X (Square)</p>
                   </div>
                 </div>
               </VCard>
@@ -206,7 +284,8 @@
           </VCard>
         </VCol>
         <VCol cols="4">
-          <VCard class="card card-tags" style="margin-bottom: 2rem">
+          <v-skeleton-loader v-if="isPageLoading" type="card" />
+          <VCard v-else class="card card-tags" style="margin-bottom: 2rem">
             <h3 class="card-title mb-6">Tags</h3>
             <VRow>
               <VCol class="d-flex">
@@ -226,6 +305,7 @@
                   color="#21094a"
                   variant="outlined"
                   @click="addTags()"
+                  :disabled="!newTag.length"
                 >
                   <VIcon icon="mdi-plus" color="#21094a"></VIcon>
                 </VBtn>
@@ -258,7 +338,8 @@
           </VCard>
         </VCol>
         <VCol cols="4">
-          <VCard class="card card-tags" style="margin-bottom: 2rem">
+          <v-skeleton-loader v-if="isPageLoading" type="card" />
+          <VCard v-else class="card card-tags" style="margin-bottom: 2rem">
             <h3 class="card-title mb-8">Visibility</h3>
             <div
               style="
@@ -287,25 +368,83 @@
       </VRow>
     </VContainer>
   </section>
-  <div class="add-products-actions" style="display: flex; justify-content: end">
-    <v-btn flat color="#fff" class="rounded-lg me-2" height="48" width="162">
-      <p>Cancel</p>
-    </v-btn>
-    <v-btn flat color="#733EE4" class="rounded-lg" height="48" width="162">
-      <v-icon size="20"> mdi-plus </v-icon>
-      <p>Add Category</p>
+  <div
+    v-if="!isPageLoading"
+    class="add-products-actions"
+    style="display: flex; justify-content: end"
+  >
+    <v-btn
+      flat
+      :color="isEditing ? '#27AE60' : '#733EE4'"
+      class="rounded-lg"
+      height="48"
+      width="162"
+      :loading="isAddingBtnLoading"
+      :disabled="isAddingBtnLoading"
+      @click="addCategory"
+    >
+      <v-icon v-if="!isEditing" size="20"> mdi-plus </v-icon>
+      <p>{{ isEditing ? 'Save Changes' : 'Add Category' }}</p>
     </v-btn>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Category } from './type';
-import { getCtegory } from '@/apis/categories.ts';
+import { updateCtegories } from '@/apis/categories.ts';
+import {
+  getFormData,
+  sendFormData,
+  updateFormData,
+} from '@/composables/products/SendFormRequest';
+import { useEditor } from '@/composables/categories/UseEditor';
+import { reactive } from 'vue';
+import { useVuelidate } from '@vuelidate/core';
+import { required } from '@vuelidate/validators';
+import { useEditCategoryData } from '@/composables/categories/UseEditCategoryData';
 
-const newCategory: any = ref({}) as unknown as Category;
+let newCategory: any = reactive({
+  displayName_En: '',
+  displayName_Ar: '',
+  description_En: '',
+  description_Ar: '',
+  visibility: '',
+}) as unknown as Category;
+
+const rules = {
+  displayName_En: { required },
+  displayName_Ar: { required },
+  description_En: { required },
+  description_Ar: { required },
+  visibility: { required },
+};
+
+const v$ = useVuelidate(rules, newCategory);
+
+let notification = ref({
+  text: 'Category Added Successfully',
+  color: '#27ae60',
+});
+let fileInput: any = ref('');
+let categoryImg = ref('');
+let categoryImgBase64: any = ref('');
+let isPageLoading = ref(false);
+let showToast = ref(false);
+let isAddingBtnLoading = ref(false);
 let newSubCategoryEn = ref('');
 let newSubCategoryAr = ref('');
 const subCategoriesToAdd: string[] | any = ref([]);
+
+const clear = () => {
+  v$.value.$reset();
+
+  for (const [key, value] of Object.entries(newCategory)) {
+    newCategory[key] = value;
+  }
+};
+
+const { description_En, description_Ar, setEditorValue } =
+  useEditor(newCategory);
 
 const addSubCategory = () => {
   subCategoriesToAdd.value.push({
@@ -344,24 +483,87 @@ const removeTag = (deletedTag: any) => {
   tagsToAdd.value = tagsToAdd.value.filter((tag: any) => tag !== deletedTag);
 };
 
-const route = useRoute();
-const setCategoryData = async () => {
-  // isPageLoading.value = true;
+const { isEditing, setCategoryData } = useEditCategoryData();
+
+onMounted(async () => {
+  isPageLoading.value = true;
   try {
-    const { data } = await getCtegory(route.params.id as string);
-    newCategory.value = data.data;
-    tagsToAdd.value = data.data.tags;
-    subCategoriesToAdd.value = data.data.subCategories;
-    // isPageLoading.value = false;
-  } catch {}
+    await setCategoryData(
+      newCategory,
+      tagsToAdd,
+      subCategoriesToAdd,
+      categoryImg,
+      description_En,
+      description_Ar
+    );
+  } catch (error) {
+  } finally {
+    isPageLoading.value = false;
+  }
+});
+
+const router = useRouter();
+
+const addCategory = async (): Promise<void> => {
+  isAddingBtnLoading.value = true;
+  setEditorValue();
+  const isValid = await v$.value.$validate();
+  if (
+    !isValid ||
+    !subCategoriesToAdd.value.length ||
+    !tagsToAdd.value.length ||
+    !categoryImg.value.length
+  ) {
+    isAddingBtnLoading.value = false;
+    notification.value.text = 'Please check your Inputs';
+    notification.value.color = '#EB5757';
+    showToast.value = true;
+    return;
+  }
+  const form = {
+    ...newCategory,
+    imageFile: categoryImgBase64.value,
+  };
+  subCategoriesToAdd.value.map((subCategory: any, index: any) => {
+    const { id, ...qux } = subCategory;
+    form[`subCategories[${index}]`] = qux;
+  });
+  tagsToAdd.value.map((tag: any, index: any) => {
+    const { id, ...qux } = tag;
+    form[`tags[${index}]`] = qux.title;
+  });
+  delete form.uuid;
+  try {
+    isEditing.value
+      ? await updateFormData('categories', form, newCategory.uuid)
+      : await sendFormData('categories', form);
+    notification.value.text = isEditing.value
+      ? 'Category Updated Successfully'
+      : 'Category Added Successfully';
+    notification.value.color = '#27ae60';
+    showToast.value = true;
+    isAddingBtnLoading.value = true;
+    setTimeout(() => {
+      router.push({ name: 'categories' });
+    }, 1000);
+  } catch (error) {
+    console.log(error);
+  } finally {
+    isAddingBtnLoading.value = false;
+  }
 };
-setCategoryData();
+
+const handleFileChange = async (event: any) => {
+  const file = event.target.files[0];
+  const newImgSrcs = (window.URL ? URL : webkitURL).createObjectURL(file);
+  categoryImg.value = newImgSrcs;
+  categoryImgBase64.value = file;
+};
 </script>
 
 <style scoped>
 .card {
   border-radius: 12px;
-  padding: 1rem 1rem;
   box-shadow: none;
 }
 
@@ -422,7 +624,6 @@ setCategoryData();
 .card-file-ui {
   border-radius: 6px;
   height: 276px;
-  border: 1px dashed var(--Purple, #733ee4);
   background: rgba(115, 62, 228, 0.05);
   box-shadow: none;
 }
@@ -497,5 +698,31 @@ setCategoryData();
   background: #7066a2;
   padding: 3px 8px;
   color: #fff;
+}
+
+.arabic-editor .ql-editor {
+  text-align: right;
+}
+.ql-toolbar.ql-snow {
+  border: none;
+  position: absolute;
+  left: 0.8rem;
+  bottom: 0.6rem;
+  width: 100%;
+  z-index: 3;
+}
+
+.arabic-editor-container .ql-toolbar.ql-snow {
+  right: 1rem;
+  bottom: 0.6rem;
+  width: 100%;
+  z-index: 3;
+}
+.ql-container.ql-snow {
+  color: #7066a2;
+}
+
+.ql-snow .ql-picker:not(.ql-color-picker):not(.ql-icon-picker) svg {
+  display: none;
 }
 </style>

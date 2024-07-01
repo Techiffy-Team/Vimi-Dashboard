@@ -26,6 +26,7 @@ const router = createRouter({
           component: () => import('@/pages/products/List.vue'),
           meta: {
             title: 'Products',
+            key: 'product',
           },
         },
         {
@@ -58,6 +59,7 @@ const router = createRouter({
           component: () => import('@/pages/categories/List.vue'),
           meta: {
             title: 'categories',
+            key: 'category',
           },
         },
         {
@@ -93,7 +95,7 @@ const router = createRouter({
           },
         },
         {
-          path: 'view-order',
+          path: 'view-order/:id',
           name: 'view-order',
           component: () => import('@/pages/orders/View.vue'),
           meta: {
@@ -125,19 +127,140 @@ const router = createRouter({
           },
         },
         {
-          path: 'view-customer',
-          name: 'view-customer',
-          component: () => import('@/pages/customers/View.vue'),
+          path: 'tickets',
+          name: 'tickets',
+          component: () => import('@/pages/tickets/List.vue'),
           meta: {
-            title: 'View Customer',
+            title: 'Tickets',
           },
         },
         {
-          path: 'add-customers',
-          name: 'add-customers',
+          path: 'view-ticket',
+          name: 'view-ticket',
+          component: () => import('@/pages/tickets/View.vue'),
+          meta: {
+            title: 'Ticket Details',
+          },
+        },
+        {
+          path: 'notifications',
+          name: 'notifications',
+          component: () => import('@/pages/notifications/List.vue'),
+          meta: {
+            title: 'Push Notifications',
+          },
+        },
+        {
+          path: 'add-notification',
+          name: 'add-notification',
+          component: () => import('@/pages/notifications/Add.vue'),
+          meta: {
+            title: 'Add Notification',
+          },
+        },
+        {
+          path: 'view-notification/:id',
+          name: 'view-notification',
+          component: () => import('@/pages/notifications/View.vue'),
+          meta: {
+            title: 'Notification Details',
+          },
+        },
+        {
+          path: 'settings',
+          name: 'settings',
+          component: () => import('@/pages/setting/index.vue'),
+          meta: {
+            title: 'Setting',
+          },
+        },
+        {
+          path: 'add-roles',
+          name: 'add-roles',
+          component: () => import('@/pages/setting/roles/Add.vue'),
+          meta: {
+            title: 'Add Role',
+          },
+        },
+        {
+          path: 'view-roles',
+          name: 'view-roles',
+          component: () => import('@/pages/setting/roles/View.vue'),
+          meta: {
+            title: 'Role Details',
+          },
+        },
+        {
+          path: 'add-users',
+          name: 'add-users',
           component: () => import('@/pages/customers/Add.vue'),
           meta: {
-            title: 'Add Customer',
+            title: 'Add User',
+          },
+        },
+        {
+          path: 'view-users',
+          name: 'view-users',
+          component: () => import('@/pages/setting/users/View.vue'),
+          meta: {
+            title: 'User Details',
+          },
+        },
+        {
+          path: 'promotion-discounts',
+          name: 'promotion-discounts',
+          component: () => import('@/pages/promotion-discounts/List.vue'),
+          meta: {
+            title: 'Promotion',
+          },
+        },
+        {
+          path: 'add-promotion-discounts',
+          name: 'add-promotion-discounts',
+          component: () => import('@/pages/promotion-discounts/Add.vue'),
+          meta: {
+            title: 'Add promotion',
+          },
+        },
+        {
+          path: 'view-promotion-discounts/:id',
+          name: 'view-promotion-discounts',
+          component: () => import('@/pages/promotion-discounts/View.vue'),
+          meta: {
+            title: 'promotion Details',
+          },
+        },
+        {
+          path: 'promotion-ads',
+          name: 'promotion-ads',
+          component: () => import('@/pages/promotion-ads/List.vue'),
+          meta: {
+            title: 'Promotion',
+            key: 'promotion-ad',
+          },
+        },
+        {
+          path: 'add-promotion-ad',
+          name: 'add-promotion-ad',
+          component: () => import('@/pages/promotion-ads/Add.vue'),
+          meta: {
+            title: 'Add promotion',
+          },
+        },
+        {
+          path: 'edit-promotion-ad/:id',
+          name: 'edit-promotion-ad',
+          component: () => import('@/pages/promotion-ads/Add.vue'),
+          meta: {
+            title: 'Edit promotion',
+          },
+        },
+        {
+          path: 'view-promotion-ad/:id',
+          name: 'view-promotion-ad',
+          component: () => import('@/pages/promotion-ads/View.vue'),
+          meta: {
+            title: 'promotion Details',
           },
         },
       ],

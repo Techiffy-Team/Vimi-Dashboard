@@ -7,10 +7,15 @@ import {
   getFormData,
   sendFormData,
 } from "@/composables/products/SendFormRequest";
-import { useEditProductData } from "@/composables/products/UseEditProductData";
+import {
+  useEditProductData,
+  isPageLoading,
+} from "@/composables/products/UseEditProductData";
+
 import { useProductQuantity } from "@/composables/products/UseProductQuantity";
 import { useProductDiscount } from "@/composables/products/UseProductDiscount";
 import { useEditor } from "@/composables/products/UseEditor";
+import { useBuildQueryString } from "@/composables/UseBuildQueryString";
 
 const newProduct = ref({
   discounts: {},
@@ -23,6 +28,7 @@ const selectedFiles = ref([]);
 const allBrands: any = ref([]);
 const newTag = ref("");
 const tagsToAdd = ref([]);
+const imgsToSend = ref([]);
 
 const { addQuantity, reduceQuantity, selectedAction } =
   useProductQuantity(newProduct);
@@ -42,7 +48,7 @@ const {
   suggestedUse_Ar,
   setEditorValue,
 } = useEditor(newProduct);
-
+const { buildQueryString } = useBuildQueryString();
 const subCategories: any = computed(() => {
   return allCategories.value.filter(
     (category: { uuid: string }) =>
@@ -53,12 +59,14 @@ const subCategories: any = computed(() => {
 
 const handleFileChange = async (event: any) => {
   const files = event.target.files;
+  const test = event.target.files[0];
   const newFiles = Array.from(files);
   selectedFiles.value.push(...newFiles);
   const newImgSrcs = newFiles.map((file: any) =>
     (window.URL ? URL : webkitURL).createObjectURL(file)
   );
   imgSrcs.value.push(...newImgSrcs);
+  imgsToSend.value.push(test);
 };
 
 const addTags = (nwTag: any) => {
@@ -73,13 +81,17 @@ const removeTag = (nwTag: any) => {
 
 const getAdditionalData = async () => {
   try {
+    const params = buildQueryString({
+      rowCount: 100,
+      pageNo: 1,
+    });
     const {
       data: { data },
-    } = await getCtegories();
+    } = await getCtegories(params);
     allCategories.value = data.result;
     const {
       data: { data: brands },
-    } = await getBrands();
+    } = await getBrands(params);
     allBrands.value = brands.result;
   } catch (error) {
     console.log(error);
@@ -91,18 +103,36 @@ const uploadProduct = async (): Promise<void> => {
   const form = getFormData({
     ...newProduct.value,
     tags: tagsToAdd.value,
-    imageFiles: selectedFiles.value,
+  });
+  if (
+    newProduct.value?.discount?.DateFrom &&
+    newProduct.value?.discount?.DateTo
+  ) {
+    Object.keys(newProduct.value.discounts).forEach((key) => {
+      if (key === "dateFrom" || key === "dateTo") {
+        // ! this send to [BE] like that discountsDateFrom
+        form.append(`discounts[0].${key}`, newProduct.value.discounts[key]);
+      }
+    });
+  }
+
+  imgsToSend.value.forEach((tag: any) => {
+    form.append("imageFiles", tag);
   });
 
+  isPageLoading.value = true;
   try {
     sendFormData("products", form);
     showToast.value = true;
   } catch (error) {
     console.log(error);
+  } finally {
+    isPageLoading.value = false;
   }
 };
 
 onMounted(async () => {
+  isPageLoading.value = true;
   await getAdditionalData();
   await setProductData(
     newProduct,
@@ -116,12 +146,13 @@ onMounted(async () => {
 });
 </script>
 <template>
-  <section class="add-products px-6">
+  <section class="px-6">
     <BaseNotifications :notification="showToast" />
     <VContainer>
       <VRow>
         <VCol cols="12">
-          <VCard class="card card-products" style="margin-bottom: 1rem">
+          <v-skeleton-loader v-if="isPageLoading" type="card" />
+          <VCard v-else class="card card-products" style="margin-bottom: 1rem">
             <h3 class="card-title">Add Products</h3>
             <VCard class="card-file" style="display: flex; gap: 1rem">
               <VFileInput
@@ -179,7 +210,8 @@ onMounted(async () => {
           </VCard>
         </VCol>
         <VCol cols="12">
-          <VRow>
+          <v-skeleton-loader v-if="isPageLoading" type="card" />
+          <VRow v-show="!isPageLoading">
             <VCol cols="6">
               <VCard class="card card-info">
                 <h3 class="card-title mb-4">Main information</h3>
@@ -218,7 +250,7 @@ onMounted(async () => {
                         font-style: normal;
                         font-weight: 400;
                       "
-                    ></VTextField>
+                    />
                   </VCol>
                   <VCol cols="12" style="position: relative">
                     <h4 class="card-info-title">General info</h4>
@@ -255,7 +287,8 @@ onMounted(async () => {
               </VCard>
             </VCol>
             <VCol cols="6">
-              <VCard class="card card-info">
+              <v-skeleton-loader v-if="isPageLoading" type="card" />
+              <VCard v-show="!isPageLoading" class="card card-info">
                 <h3 class="card-title text-right mb-4">المعلومات الأساسية</h3>
                 <VRow disable-gutters style="gap: 1rem; direction: rtl">
                   <VCol cols="12">
@@ -294,7 +327,7 @@ onMounted(async () => {
                         font-style: normal;
                         font-weight: 400;
                       "
-                    ></VTextField>
+                    />
                   </VCol>
                   <VCol
                     cols="12"
@@ -346,7 +379,8 @@ onMounted(async () => {
         </VCol>
         <VCol cols="8" style="position: relative; z-index: 1">
           <VCol>
-            <VCard class="card card-products" style="margin: 1rem 0">
+            <v-skeleton-loader v-if="isPageLoading" type="card" />
+            <VCard v-else class="card card-products" style="margin: 1rem 0">
               <h3 class="card-title mb-6">Category</h3>
               <VRow disable-gutters>
                 <VCol>
@@ -361,7 +395,7 @@ onMounted(async () => {
                     class="card-info-list"
                     :items="allCategories"
                     item-value="uuid"
-                    item-title="uuid"
+                    item-title="displayName_En"
                   ></v-select>
                 </VCol>
                 <VCol>
@@ -376,14 +410,16 @@ onMounted(async () => {
                     class="card-info-list"
                     :items="subCategories"
                     item-value="uuid"
-                    item-title="displayName"
+                    item-title="displayName_En"
                   ></v-select>
                 </VCol>
               </VRow>
             </VCard>
           </VCol>
           <VCol>
+            <v-skeleton-loader v-if="isPageLoading" type="card" />
             <VCard
+              v-else
               class="card card-Warehouse"
               style="margin-bottom: 1rem; margin-top: 1rem"
             >
@@ -404,7 +440,7 @@ onMounted(async () => {
                       font-style: normal;
                       font-weight: 400;
                     "
-                  ></VTextField>
+                  />
                 </v-col>
                 <v-col cols="6">
                   <h4 class="card-info-title">Stock Quantity</h4>
@@ -423,7 +459,7 @@ onMounted(async () => {
                       font-style: normal;
                       font-weight: 400;
                     "
-                  ></VTextField>
+                  />
                 </v-col>
                 <VCol
                   v-if="isEditing && selectedAction === ''"
@@ -493,33 +529,38 @@ onMounted(async () => {
             </VCard>
           </VCol>
           <VCol>
-            <VCard class="card card-tags" style="margin-bottom: 2rem">
+            <v-skeleton-loader v-if="isPageLoading" type="card" />
+            <VCard v-else class="card card-tags" style="margin-bottom: 2rem">
               <h3 class="card-title">Style</h3>
               <VRow disable-gutters>
-                <VCol cols="6" class="px-0 pl-2" style="">
+                <VCol cols="6" style="">
                   <h4 class="card-info-title">Weight</h4>
-                  <VTextField
-                    label=""
-                    suffix="gm"
-                    type="number"
-                    density="compact"
-                    placeholder="Enter weight"
-                    variant="outlined"
-                    bg-color="#faf9fe"
-                    v-model="newProduct.weight"
-                    style="
-                      color: #afaacb;
-                      font-size: 14px;
-                      font-style: normal;
-                      font-weight: 400;
-                    "
-                  />
+                  <VRow>
+                    <VCol>
+                      <VTextField
+                        label=""
+                        suffix="gm"
+                        type="number"
+                        density="compact"
+                        placeholder="Enter weight"
+                        variant="outlined"
+                        bg-color="#faf9fe"
+                        v-model="newProduct.weight"
+                        style="
+                          color: #afaacb;
+                          font-size: 14px;
+                          font-style: normal;
+                          font-weight: 400;
+                        "
+                      />
+                    </VCol>
+                  </VRow>
                 </VCol>
 
                 <VCol cols="6">
                   <h4 class="card-info-title">Dimensions</h4>
                   <VRow>
-                    <v-col cols="4">
+                    <v-col>
                       <VTextField
                         label=""
                         suffix="W"
@@ -531,7 +572,7 @@ onMounted(async () => {
                       />
                     </v-col>
 
-                    <v-col cols="4">
+                    <v-col>
                       <VTextField
                         label=""
                         suffix="H"
@@ -543,7 +584,7 @@ onMounted(async () => {
                       />
                     </v-col>
 
-                    <v-col cols="4">
+                    <v-col>
                       <VTextField
                         label=""
                         suffix="D"
@@ -560,7 +601,9 @@ onMounted(async () => {
             </VCard>
           </VCol>
           <VCol>
+            <v-skeleton-loader v-if="isPageLoading" type="card" />
             <VCard
+              v-else
               class="card card-Warehouse"
               style="margin-bottom: 1rem; margin-top: 1rem"
             >
@@ -668,7 +711,9 @@ onMounted(async () => {
           </VCol>
           <!-- in case edit show -->
           <VCol v-if="$route.meta.title !== 'Add Product'">
+            <v-skeleton-loader v-if="isPageLoading" type="card" />
             <VCard
+              v-else
               class="card card-Warehouse"
               style="margin-bottom: 1rem; margin-top: 1rem"
             >
@@ -684,7 +729,8 @@ onMounted(async () => {
           </VCol>
         </VCol>
         <VCol cols="4" class="pt-10">
-          <VCard class="card card-type" style="margin-bottom: 2rem">
+          <v-skeleton-loader v-if="isPageLoading" type="card" />
+          <VCard v-else class="card card-type" style="margin-bottom: 2rem">
             <h3 class="card-title">Type</h3>
             <v-col cols="12" class="px-2 pr-6">
               <v-select
@@ -699,7 +745,11 @@ onMounted(async () => {
               ></v-select>
             </v-col>
           </VCard>
-          <VCard class="card card-tags" style="margin-bottom: 2rem">
+          <VCard
+            v-if="!isPageLoading"
+            class="card card-tags"
+            style="margin-bottom: 2rem"
+          >
             <h3 class="card-title mb-6">Tags</h3>
             <VRow>
               <VCol class="d-flex">
@@ -743,7 +793,11 @@ onMounted(async () => {
               </VCol>
             </VRow>
           </VCard>
-          <VCard class="card card-tags" style="margin-bottom: 2rem">
+          <VCard
+            v-if="!isPageLoading"
+            class="card card-tags"
+            style="margin-bottom: 2rem"
+          >
             <h3 class="card-title mb-8">Visibility</h3>
             <div
               style="
@@ -762,7 +816,7 @@ onMounted(async () => {
                   label="Published"
                   value="Published"
                   color="primary"
-                  style="margin-right: 6rem"
+                  style="margin-right: 10rem"
                 ></v-radio>
                 <v-radio
                   label="Hidden"
@@ -772,7 +826,11 @@ onMounted(async () => {
               </v-radio-group>
             </div>
           </VCard>
-          <VCard class="card card-tags" style="margin-bottom: 2rem">
+          <VCard
+            v-if="!isPageLoading"
+            class="card card-tags"
+            style="margin-bottom: 2rem"
+          >
             <h3 class="card-title mb-8">Expiry date</h3>
             <GDatePicker
               label="Expiry date"
@@ -780,7 +838,11 @@ onMounted(async () => {
               v-model="newProduct.expireDate"
             />
           </VCard>
-          <VCard class="card card-tags" style="margin-bottom: 2rem">
+          <VCard
+            v-if="!isPageLoading"
+            class="card card-tags"
+            style="margin-bottom: 2rem"
+          >
             <h3 class="card-title">Brand</h3>
             <v-col cols="12">
               <v-select
@@ -801,8 +863,18 @@ onMounted(async () => {
       </VRow>
     </VContainer>
   </section>
-  <div class="add-products-actions" style="display: flex; justify-content: end">
-    <VBtn class="" style="margin-right: 1rem" variant="text">Cancel</VBtn>
+  <div
+    v-if="!isPageLoading"
+    class="add-products-actions"
+    style="display: flex; justify-content: end"
+  >
+    <VBtn
+      class=""
+      style="margin-right: 1rem"
+      variant="text"
+      @click="$router.go(-1)"
+      >Cancel</VBtn
+    >
     <VBtn
       class=""
       style="margin-right: 1rem"

@@ -1,4 +1,4 @@
-export default [
+const navItems = [
   {
     parent: 'Main',
     children: [
@@ -9,7 +9,7 @@ export default [
       },
       {
         name: 'Products',
-        icon: 'products',
+        icon: 'Products',
         path: { name: 'products' },
       },
       {
@@ -19,7 +19,7 @@ export default [
       },
       {
         name: 'Orders',
-        icon: 'orders',
+        icon: 'Orders',
         path: { name: 'orders' },
       },
       {
@@ -30,17 +30,17 @@ export default [
       {
         name: 'Tickets',
         icon: 'tickets',
-        // path: { name: "tickets" },
+        path: { name: 'tickets' },
       },
       {
         name: 'Promotion',
         icon: 'Adds',
-        // path: { name: "promotion" },
+        path: { name: 'promotion-discounts' },
       },
       {
-        name: 'Notifications',
+        name: 'Push Notifications',
         icon: 'notifications-nav',
-        // path: { name: "notifications" },
+        path: { name: 'notifications' },
       },
     ],
   },
@@ -50,13 +50,18 @@ export default [
       {
         name: 'Settings',
         icon: 'settings',
-        // path: { name: "settings" },
-      },
-      {
-        name: 'Log out',
-        icon: 'logout',
-        action: 'logout',
+        path: { name: 'settings' },
       },
     ],
   },
 ];
+
+const actions = [
+  {
+    name: 'Log out',
+    icon: 'logout',
+    action: 'logout',
+  },
+];
+
+export { navItems, actions };

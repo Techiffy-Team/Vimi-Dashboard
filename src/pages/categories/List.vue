@@ -1,63 +1,19 @@
-<template>
-  <div class="px-12 w-100">
-    <listingHeader
-      v-if="!selectedItems.length"
-      addAction="Add Category"
-      placeholder="Search , ID , Category name"
-      pathName="add-category"
-    />
-    <tableFilters
-      v-else
-      :filters="categoriesFilter"
-      :triggerCheckAll="triggerCheckAll"
-      @Delete="toggleDeleteModal"
-      @CancelSellection="resetSelectedItems"
-      @SelectAll="SelectAll"
-    />
-    <listingItems
-      ref="table"
-      @emitSelectedItems="selectedItems = $event"
-      @openDeleteModal="toggleDeleteModal"
-      class="my-6"
-      :items="tableItems"
-      :headers="headers"
-      :itemValue="'uuid'"
-      :isPageLoading="isPageLoading"
-      :triggerResetSelectedItems="triggerResetSelectedItems"
-      :triggerSelectAll="triggerSelectAll"
-    />
-    <div class="w-100">
-      <p class="my-auto text-9089B2">
-        View
-        {{ tableItems.length }} from {{ totalCount }}
-      </p>
-      <v-pagination
-        v-model="page"
-        :length="pagesCount"
-        @change="getNextCategoriesPage"
-      />
-    </div>
-    <GlobalPopup
-      :options="modalOptions"
-      :modalState="modalState"
-      :isDeletionInProgress="isDeletionInProgress"
-      @closeModal="toggleDeleteModal"
-      @deleteItem="deleteMultiple"
-    />
-  </div>
-</template>
-
 <script lang="ts" setup>
-import categoriesFilter from '@/constants/categoriesFilter';
+import { categoriesFilter, headers } from '@/constants/categories';
 import { getCtegories, deleteCtegories } from '@/apis/categories.ts';
+import { useBuildQueryString } from '@/composables/UseBuildQueryString';
+import { debounce } from '@/helpers/debounce.ts';
 
-let page = ref(1);
+const { buildQueryString } = useBuildQueryString();
+
 let isPageLoading = ref(false);
 let isDeletionInProgress = ref(false);
 
 const selectedItems: Ref<string[]> = ref([]);
 let categories = ref([]);
+let currentPage = ref(1);
 let totalCount = ref(0);
+let search: Ref<any> = ref('');
 
 let pagesCount = computed(() => {
   return !totalCount.value || !categories.value.length
@@ -73,9 +29,10 @@ let table: any = ref(null);
 let triggerResetSelectedItems = ref(false);
 let triggerSelectAll = ref(false);
 
-const getNextCategoriesPage = () => {
-  page.value += 1;
-};
+watch(currentPage, async () => {
+  setCategories();
+});
+
 const resetSelectedItems = () => {
   selectedItems.value = [];
   triggerResetSelectedItems.value = !triggerResetSelectedItems.value;
@@ -100,25 +57,11 @@ const setCheckAll = (val: boolean) => {
   triggerCheckAll.value = val;
 };
 
-// let deletedItemId = ref('');
-
 const toggleDeleteModal = ({ uuid = '', options = {} }) => {
   modalOptions.value = options;
   modalState.value = !!Object.keys(options).length;
   uuid.length && selectedItems.value.push(uuid);
 };
-
-// const deleteItem = async () => {
-//   isDeletionInProgress.value = true;
-//   try {
-//     await deleteCtegories(deletedItemId.value);
-//   } catch {
-//   } finally {
-//     toggleDeleteModal();
-//     isDeletionInProgress.value = false;
-//     setCategories();
-//   }
-// };
 
 const deleteMultiple = async () => {
   isDeletionInProgress.value = true;
@@ -139,10 +82,20 @@ const deleteMultiple = async () => {
   }
 };
 
+const updateSearch = debounce((searchKey: any) => {
+  search.value = searchKey;
+  setCategories();
+}, 500);
+
 const setCategories = async () => {
   isPageLoading.value = true;
+  const params = buildQueryString({
+    rowCount: 10,
+    pageNo: currentPage.value,
+    search: search.value,
+  });
   try {
-    const { data } = await getCtegories();
+    const { data } = await getCtegories(params);
     categories.value = data.data.result ?? [];
     totalCount.value = data.data.totalCount;
     isPageLoading.value = false;
@@ -153,40 +106,68 @@ const setCategories = async () => {
 };
 
 const tableItems = computed(() => {
-  return categories.value.slice(10 * page.value - 10, 10 * page.value);
+  return categories.value;
 });
-const headers = [
-  {
-    title: 'ID',
-    key: 'uuid',
-    sortable: false,
-    align: 'left',
-  },
-  { title: 'Category', key: 'displayName_En', align: 'left', sortable: true },
-  {
-    title: 'Sub-Cate. No.',
-    key: 'subCategoryCount',
-    align: 'center',
-    sortable: false,
-  },
-  {
-    title: 'Items QTY',
-    key: 'productCount',
-    align: 'center',
-    sortable: false,
-  },
-  {
-    title: 'Published date',
-    key: 'dateCreated',
-    align: 'left',
-    sortable: false,
-  },
-  { title: 'Visibility', key: 'visibility', align: 'center', sortable: true },
-  { key: 'actions', align: 'center', sortable: false },
-];
+const handleCancel = () => {
+  toggleDeleteModal({});
+};
 
-setCategories();
+onMounted(async () => {
+  setCategories();
+});
 </script>
+
+<template>
+  <div class="px-12 w-100">
+    <listingHeader
+      v-if="!selectedItems.length"
+      addAction="Add Category"
+      placeholder="Search , ID , Category name"
+      pathName="add-category"
+      @updateSearch="updateSearch"
+    />
+    <tableFilters
+      v-else
+      :filters="categoriesFilter"
+      :triggerCheckAll="triggerCheckAll"
+      @Delete="toggleDeleteModal"
+      @CancelSellection="resetSelectedItems"
+      @SelectAll="SelectAll"
+    />
+    <listingItems
+      ref="table"
+      @emitSelectedItems="selectedItems = $event"
+      @openDeleteModal="toggleDeleteModal"
+      class="my-6"
+      routeDir="category"
+      :items="tableItems"
+      :headers="headers"
+      :itemValue="'uuid'"
+      :isPageLoading="isPageLoading"
+      :triggerResetSelectedItems="triggerResetSelectedItems"
+      :triggerSelectAll="triggerSelectAll"
+    />
+    <div class="w-100 d-flex justify-space-between">
+      <p class="my-auto text-9089B2">
+        View
+        {{ !isPageLoading ? tableItems.length : '...' }} from {{ totalCount }}
+      </p>
+      <v-pagination
+        v-if="pagesCount > 1 && !isPageLoading"
+        v-model="currentPage"
+        :length="pagesCount"
+        :total-visible="pagesCount"
+      />
+    </div>
+    <GlobalPopup
+      :options="modalOptions"
+      :modalState="modalState"
+      :isDeletionInProgress="isDeletionInProgress"
+      :onCancel="handleCancel"
+      :onConfirm="deleteMultiple"
+    />
+  </div>
+</template>
 
 <style>
 .bg-f4f3f9 {

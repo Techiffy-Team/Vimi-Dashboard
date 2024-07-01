@@ -1,48 +1,48 @@
 
 const headers = [
   {
-    key: "orderNumber",
+    key: "serialNumber",//orderNumber
     title: "Order NO.",
     sortable: false,
     removable: false,
     align: "center"
   },
   {
-    key: "Customer",
+    key: "userFullName",// Customer
     title: "Customer",
     sortable: false,
     removable: false,
     align: "center"
   },
   {
-    key: "Product",
+    key: "items",
     title: "Product",
     sortable: true,
     removable: false,
-    align: "start"
+    align: "center"
   },
   {
-    key: "Price",
-    title: "Price",
-    removable: false,
-    align: "start"
-  },
-  {
-    key: "orderDate",
+    key: "dateCreated",
     title: "Order date",
     sortable: false,
     removable: false,
     align: "center"
   },
   {
-    key: "Payment",
+    key: "totalAmount",
+    title: "Price",
+    removable: false,
+    align: "start"
+  },
+  {
+    key: "paymentMethod",
     title: "Payment",
     sortable: false,
     removable: false,
     align: "center"
   },
   {
-    key: "Status",
+    key: "status",
     title: "Status",
     sortable: true,
     removable: false,
@@ -50,109 +50,26 @@ const headers = [
   }
 ]
 
-const items = [
-  {
-    "orderNumber": "#76459811",
-    "Customer": "Lorem ipsum ",
-    "Product": "Lorem ipsum dolor sit ame consectetur.",
-    "orderDate": "21/11/2022",
-    "Price": "KD 20",
-    "Payment": "451245",
-    "paymentMethod": "MASTERCARD",
-    "Status": "Pending"
-  },
-  {
-    "orderNumber": "#875243",
-    "Customer": "Lorem ipsum ",
-    "Product": "Lorem ipsum dolor sit ame consectetur.",
-    "orderDate": "21/11/2022",
-    "Price": "KD 20",
-    "Payment": "451245",
-    "paymentMethod": "VISA",
-    "Status": "Delivered"
-  },
-  {
-    "orderNumber": "#76459811",
-    "Customer": "Lorem ipsum ",
-    "Product": "Lorem ipsum dolor sit ame consectetur.",
-    "orderDate": "21/11/2022",
-    "Price": "KD 20",
-    "Payment": "451245",
-    "paymentMethod": "VISA",
-
-    "Status": "Shipped"
-  },
-  {
-    "orderNumber": "#76459811",
-    "Customer": "Lorem ipsum ",
-    "Product": "Lorem ipsum dolor sit ame consectetur.",
-    "orderDate": "21/11/2022",
-    "Price": "KD 20",
-    "Payment": "451245",
-    "paymentMethod": "MASTERCARD",
-
-    "Status": "Returned"
-  },
-  {
-    "orderNumber": "#76459811",
-    "Customer": "Lorem ipsum ",
-    "Product": "Lorem ipsum dolor sit ame consectetur.",
-    "orderDate": "21/11/2022",
-    "Price": "KD 20",
-    "Payment": "451245",
-    "Status": "Cancelled"
-  }, {
-    "orderNumber": "#76459811",
-    "Customer": "Lorem ipsum ",
-    "Product": "Lorem ipsum dolor sit ame consectetur.",
-    "orderDate": "21/11/2022",
-    "Price": "KD 20",
-    "Payment": "451245",
-    "paymentMethod": "MASTERCARD",
-    "Status": "In progress"
-  },
-  {
-    "orderNumber": "#76459811",
-    "Customer": "Lorem ipsum ",
-    "Product": "Lorem ipsum dolor sit ame consectetur.",
-    "orderDate": "21/11/2022",
-    "Price": "KD 20",
-    "Payment": "451245",
-    "paymentMethod": "VISA",
-    "Status": "Return in progress"
-  },
-  {
-    "orderNumber": "#76459811",
-    "Customer": "Lorem ipsum ",
-    "Product": "Lorem ipsum dolor sit ame consectetur.",
-    "orderDate": "21/11/2022",
-    "Price": "KD 20",
-    "Payment": "451245",
-    "paymentMethod": "MASTERCARD",
-    "Status": "Rejected"
-  }
-
-]
 const ordersFilter = [
   {
     id: 0,
     label: 'View Details',
-    icon: 'mdi-eye-outline',
+    svg: 'eye',
   },
   {
     id: 1,
     label: 'Change Status',
-    icon: 'mdi-cached',
+    svg: 'Change',
   },
   {
     id: 2,
     label: 'Cancel Order',
-    icon: 'mdi-close-circle',
+    svg: 'close-circle (1)',
   },
   {
     id: 5,
     label: 'Archive Order',
-    icon: 'mdi-bookmark-outline',
+    svg: 'archive',
   },
 
   {
@@ -162,7 +79,7 @@ const ordersFilter = [
   },
   {
     id: 5,
-    label: 'Cancel Selection',
+    label: 'Cancel Sellection',
     icon: '',
   },
 

@@ -14,7 +14,7 @@
         <v-icon
           size="24"
           color="#9089B2"
-          @click="closeModal"
+          @click="cancelAction"
           :disabled="isDeletionInProgress"
         >
           mdi-close
@@ -33,6 +33,12 @@
             class="mx-auto my-auto"
             :color="'#EB5757'"
           /> -->
+          <SvgIcon
+            v-if="options.svg"
+            :icon="options.svg"
+            class="mx-auto my-auto"
+            width="60px"
+          />
           <DeleteIcon
             v-if="options.icon === 'deleteIcon'"
             class="mx-auto my-auto"
@@ -77,6 +83,7 @@
         >
           {{ options.text }}
         </p>
+        <slot></slot>
         <div class="mt-6" v-if="options.input">
           <p
             style="
@@ -133,9 +140,9 @@
             color: #21094a;
           "
           :disabled="isDeletionInProgress"
-          @click="closeModal"
+          @click="cancelAction"
         >
-          <span class="tf"> Cancel </span>
+          <span class="tf"> {{ options.secondaryButtonTitle }} </span>
         </v-btn>
         <v-btn
           class="mx-2 mt-0"
@@ -144,7 +151,7 @@
           :style="`border-radius: 8px; background: ${options.buttonColor}; color: #fff`"
           :loading="isDeletionInProgress"
           :disabled="isDeletionInProgress"
-          @click="deleteItem"
+          @click="confirmAction"
         >
           <span class="tf">
             {{ options.buttonTitle }}
@@ -164,15 +171,25 @@ const props = defineProps({
   },
   options: {
     default: {
-      sheetColor: '#733EE4',
-      icon: 'AddIcon',
-      title: 'Title',
-      text: 'Text',
-      buttonColor: '#733EE4',
-      buttonTitle: 'Button',
+      sheetColor: "#733EE4",
+      icon: "AddIcon",
+      title: "Title",
+      text: "Text",
+      buttonColor: "#733EE4",
+      buttonTitle: "Button",
+      secondaryButtonTitle: "Cancel",
       input: false,
+      svg: "",
     },
     required: true,
+  },
+  onCancel: {
+    type: Function,
+    default: () => {},
+  },
+  onConfirm: {
+    type: Function,
+    default: () => {},
   },
   isDeletionInProgress: {
     default: false,
@@ -185,15 +202,23 @@ let localModalState = computed({
     return props.modalState;
   },
   set(value) {
-    emit('updateState', value);
+    emit("updateState", value);
   },
 });
-const emit = defineEmits(['closeModal', 'updateState', 'deleteItem']);
+const emit = defineEmits(["closeModal", "updateState", "deleteItem"]);
 const closeModal = () => {
-  emit('closeModal', {});
+  emit("closeModal", {});
+};
+
+const cancelAction = () => {
+  props.onCancel();
+};
+
+const confirmAction = () => {
+  props.onConfirm();
 };
 
 const deleteItem = () => {
-  emit('deleteItem');
+  emit("deleteItem");
 };
 </script>

@@ -14,7 +14,7 @@ const headers = [
     sortable: true,
     width: 250,
   },
-  { title: "Category", key: "categoryName", align: "center", sortable: true },
+  { title: "Category", key: "categoryDisplayName_Ar", align: "center", sortable: true },
   { title: "Type", key: "type", align: "left", sortable: false },
   { title: "Qty", key: "stockQuantity", align: "left", sortable: false },
   { title: "Price", key: "price", align: "left", sortable: true },
@@ -23,6 +23,40 @@ const headers = [
 ];
 
 
+const productFilter = [
+  {
+    id: 0,
+    label: 'View Details',
+    svg: 'eye',
+  },
+  {
+    id: 1,
+    label: 'Edit',
+    svg: 'edit (1)',
+  },
+  {
+    id: 2,
+    label: 'Hide Product',
+    svg: 'eye-crossed',
+  },
+  {
+    id: 3,
+    label: 'Delete',
+    svg: 'delete (1)',
+  },
+  {
+    id: 4,
+    label: 'Select All',
+    icon: '',
+  },
+  {
+    id: 5,
+    label: 'Cancel Sellection',
+    icon: '',
+  },
+]
+
 export {
-  headers
+  headers,
+  productFilter
 }

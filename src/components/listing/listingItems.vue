@@ -1,5 +1,14 @@
 <script setup>
+
+import { useStyleState } from "@/composables/UseStyleState";
+import { changeOrderStatusAndEstimatedDays } from "@/apis/orders";
+
+const { getStyleStatus } = useStyleState();
 const props = defineProps({
+  showSelect: {
+    type: Boolean,
+    default: true,
+  },
   isPageLoading: {
     type: Boolean,
     required: true,
@@ -10,6 +19,10 @@ const props = defineProps({
   },
   items: {
     type: Array,
+    required: true,
+  },
+  routeDir: {
+    type: String,
     required: true,
   },
   itemValue: {
@@ -32,11 +45,11 @@ const route = useRoute();
 const viewDetails = (...event) => {
   router.push({
     name: `view-${props.routeDir}`,
-    params: { id: event[1]?.item.uuid },
+    params: { id: event[1]?.item?.uuid ?? event[1]?.item?.id },
   });
 };
 
-const dateFormattinmg = (date) => {
+const dateFormatting = (date) => {
   return new Date(date).toLocaleDateString('en-US');
 };
 const items = [
@@ -179,82 +192,28 @@ const items = [
   // ... more items
 ];
 
-const orderStatus = ref([
-  { nameAr: 'قيد الانتظار', nameEn: 'Pending' },
-  {
-    nameAr: 'تم التسليم',
-    nameEn: 'Delivered',
-  },
-  {
-    nameAr: 'تم الشحن',
-    nameEn: 'Shipped',
-  },
-  {
-    nameAr: 'تم الاسترجاع',
-    nameEn: 'Returned',
-  },
-  {
-    nameAr: 'ملغي',
-    nameEn: 'Cancelled',
-  },
-  {
-    nameAr: 'في الانتظار',
-    nameEn: 'In progress',
-  },
-  {
-    nameAr: 'في انتظار الاسترجاع',
-    nameEn: 'Return in progress',
-  },
-  {
-    nameAr: 'مرفوض',
-    nameEn: 'Rejected',
-  },
-]);
-const getStyleStatus = (status) => {
-  const styles = {
-    Pending: {
-      color: '#E2B000',
-      background: '#e2b0001a',
-    },
-    Delivered: {
-      color: '#27ae60',
-      background: '#27ae601a',
-    },
-    Active: {
-      color: '#27ae60',
-      background: '#27ae601a',
-    },
-    Shipped: {
-      color: '#733EE4',
-      background: '#733ee41a',
-    },
-    Returned: {
-      color: '#21094A',
-      background: '#21094a1a',
-    },
-    Blocked: {
-      color: '#EB5757',
-      background: '#eb57571a',
-    },
-    Cancelled: {
-      color: '#EB5757',
-      background: '#eb57571a',
-    },
-    'In progress': {
-      color: '#F2994A',
-      background: '#f2994a1a',
-    },
-    'Return in progress': {
-      color: '#21094A',
-      background: '#21094a1a',
-    },
-    Rejected: {
-      color: '#EB5757',
-      background: '#eb57571a',
-    },
-  };
 
-  return styles[status];
+const statuses = ref([
+  "Pending",
+  "In progress",
+  "Shipped",
+  "Delivered",
+  "Cancelled",
+  "Return Requested",
+  "Return Cancelled",
+  "Return In Progress",
+  "Returned",
+  // "reject return request",
+
+]);
+const nextStatus = (currentStatus) => {
+  const currentIndex = statuses.value?.indexOf(currentStatus);
+  if (currentStatus === "Delivered" || currentStatus === "Cancelled") {
+    return [currentStatus];
+  } else if (currentIndex >= 0 && currentIndex < statuses.value?.length - 1) {
+    return [statuses.value[currentIndex + 1]];
+  }
+  return [currentStatus];
 };
 
 const emit = defineEmits(['emitSelectedItems'], ['openDeleteModal']);
@@ -292,8 +251,8 @@ const openDeleteModal = ({ uuid }) => {
   emit('openDeleteModal', {
     uuid,
     options: {
-      title: 'Delete Product',
-      text: 'Are you sure you want to delete this Product ?',
+      title: `Delete ${route.meta.key.includes('-') ? route.meta.key.split('-')[1]?.toUpperCase() : route?.meta?.key?.toUpperCase()}`,
+      text: `Are you sure you want to delete this ${route.meta.key} ?`,
       buttonTitle: 'Yes, Delete',
       buttonColor: '#EB5757',
       icon: 'deleteIcon',
@@ -302,63 +261,261 @@ const openDeleteModal = ({ uuid }) => {
   });
 };
 
+const updateOrderStatus = async (item) => {
+  try {
+    await changeOrderStatusAndEstimatedDays(item.uuid)();
+  } catch (error) {}
+};
+
 const handleGoTOAction = ({ uuid }, action) => {
-  const type = route.path.includes('products') ? 'product' : 'category';
-  router.push({ name: `${action}-${type}`, params: { id: uuid } });
+  router.push({ name: `${action}-${route.meta.key}`, params: { id: uuid } });
+};
+
+const getCellProps = ({ item }) => {
+  return selectedItems.value.includes(item[`${props.itemValue}`])
+    ? { class: 'bg-f1ecfc' }
+    : {};
 };
 </script>
 
 <template>
-  <div classs="d-flex w-100">
+  <v-skeleton-loader v-if="isPageLoading" type="table" />
+  <div v-else-if="itemsLocal.length" class="d-flex w-100">
     <dataTableLoader v-if="isPageLoading" />
     <v-data-table
-      v-else-if="itemsLocal.length"
+      class="listing-table"
+      :class="{ showSelect: showSelect }"
       v-bind="$attrs"
       v-model="selectedItems"
-      class="listin-table"
       :headers="headerLocal"
       :items="itemsLocal"
       :item-value="itemValue"
-      show-select
+      :cell-props="getCellProps"
       :items-per-page="10"
+      sort-asc-icon="mdi-menu-swap"
+      sort-desc-icon="mdi-menu-swap"
+      :show-select="showSelect"
       hide-default-footer
       @input="selectItems($event)"
       @click:row="viewDetails"
     >
-      <!-- <template v-slot:header="{ props: { headers } }">
-        <thead>
-          <tr>
-            <th v-for="h in headers" :key="h.text">
-              <div class="mx-auto">
-                <p>{{ h.text }}</p>
-              </div>
-            </th>
-          </tr>
-        </thead>
-      </template> -->
-
-      <!-- <template v-slot:item.exclusive="{ item }">
-        <div class="checkBox">
-          <v-checkbox v-model="item.exclusive" hide-details="true" />
-        </div>
-      </template> -->
-
       <template v-slot:item.uuid="{ item }">
-        <div class="d-flex">
-          <p class="py-1 text-subtitle-1">#{{ item.uuid.slice(0, 8) }}</p>
+        <div>
+          <p
+            style="
+              color: var(--Black, #21094a);
+              font-family: Roboto;
+              font-size: 14px;
+              font-style: normal;
+              font-weight: 400;
+              line-height: 150%;
+            "
+          >
+            #{{ item.uuid.slice(0, 8) }}
+          </p>
         </div>
       </template>
 
       <template v-slot:item.subCategoryCount="{ item }">
         <div>
-          <p class="text-subtitle-1">{{ item.subCategoryCount }} sub</p>
+          <p
+            style="
+              color: var(--Purple, #733ee4);
+              font-family: Roboto;
+              font-size: 14px;
+              font-style: normal;
+              font-weight: 500;
+              line-height: 150%;
+            "
+          >
+            {{ item.subCategoryCount }} sub
+          </p>
+        </div>
+      </template>
+
+      <template v-slot:item.imagePath="{ item }">
+        <div class="d-flex justify-start">
+          <img
+            :src="`https://techify-001-site1.htempurl.com${item.imagePath}`"
+            alt=""
+            style="
+              width: 88px;
+              height: 44px;
+              border-radius: var(--Spacing-N4, 8px);
+
+              background: url(<path-to-image>) lightgray 50% / cover no-repeat;
+            "
+          />
+        </div>
+      </template>
+
+      <template v-slot:item.target="{ item }">
+        <div>
+          <p
+            style="
+              color: var(--Black, #21094a);
+              /* 16/B1-R-16 */
+              font-family: Roboto;
+              font-size: 16px;
+              font-style: normal;
+              font-weight: 400;
+              line-height: 150%; /* 24px */
+            "
+          >
+            {{ item.target }}
+          </p>
+        </div>
+      </template>
+
+      <template v-slot:item.navigation="{ item }">
+        <div>
+          <p
+            style="
+              color: var(--Black, #21094a);
+              /* 16/B1-R-16 */
+              font-family: Roboto;
+              font-size: 16px;
+              font-style: normal;
+              font-weight: 400;
+              line-height: 150%; /* 24px */
+            "
+          >
+            {{ item.navigation }}
+          </p>
+        </div>
+      </template>
+
+      <template v-slot:item.place="{ item }">
+        <div>
+          <p
+            style="
+              color: var(--Black, #21094a);
+              /* 16/B1-R-16 */
+              font-family: Roboto;
+              font-size: 16px;
+              font-style: normal;
+              font-weight: 400;
+              line-height: 150%; /* 24px */
+            "
+          >
+            {{ item.place }}
+          </p>
+        </div>
+      </template>
+      <template v-slot:item.id="{ item }">
+        <div>
+          <p
+            style="
+              color: var(--Black, #21094a);
+              /* 16/B1-R-16 */
+              font-family: Roboto;
+              font-size: 16px;
+              font-style: normal;
+              font-weight: 400;
+              line-height: 150%; /* 24px */
+            "
+          >
+            {{ item.id }}
+          </p>
+        </div>
+      </template>
+
+      <template v-slot:item.title="{ item }">
+        <div>
+          <p class="product text-subtitle-1">{{ item.title }}</p>
+        </div>
+      </template>
+
+      <template v-slot:item.description="{ item }">
+        <div>
+          <p class="product text-subtitle-1">{{ item.description }}</p>
+        </div>
+      </template>
+
+      <template v-slot:item.roleName="{ item }">
+        <div>
+          <p
+            style="
+              color: var(--Black, #21094a);
+              font-family: Roboto;
+              font-size: 16px;
+              font-style: normal;
+              font-weight: 500;
+              line-height: 150%;
+            "
+          >
+            {{ dateFormatting(item.dateCreated) }}
+          </p>
+        </div>
+      </template>
+
+      <template v-slot:item.dateCreated="{ item }">
+        <p class="product text-subtitle-1">
+          {{ dateFormatting(item.dateCreated) }}
+        </p>
+      </template>
+
+      <template v-slot:item.startDate="{ item }">
+        <p class="product text-subtitle-1">
+          {{ dateFormatting(item.startDate) }}
+        </p>
+      </template>
+
+      <template v-slot:item.email="{ item }">
+        <div>
+          <p class="product text-subtitle-1">
+            {{ item.email }}
+          </p>
+        </div>
+      </template>
+      <template v-slot:item.phoneNumber="{ item }">
+        <div>
+          <p class="product text-subtitle-1">
+            {{ item.phoneNumber }}
+          </p>
+        </div>
+      </template>
+      <template v-slot:item.spent="{ item }">
+        <div>
+          <p class="product text-subtitle-1">
+            {{ item.spent }}
+          </p>
+        </div>
+      </template>
+
+      <template v-slot:item.itemsNumber="{ item }">
+        <div>
+          <p class="product text-subtitle-1">
+            {{ item.itemsNumber }}
+          </p>
+        </div>
+      </template>
+
+      <template v-slot:item.joiningDate="{ item }">
+        <div>
+          <p class="product text-subtitle-1">
+            {{ item.joiningDate }}
+          </p>
+        </div>
+      </template>
+
+      <template v-slot:item.respondDate="{ item }">
+        <div>
+          <p class="product text-subtitle-1">{{ item.respondDate }}</p>
         </div>
       </template>
 
       <template v-slot:item.productCount="{ item }">
         <div>
           <p
-            class="text-subtitle-1"
+            style="
+              text-align: center;
+              font-family: Roboto;
+              font-size: 16px;
+              font-style: normal;
+              font-weight: 400;
+              line-height: 150%;
+            "
             :style="{ color: item.productCount <= 10 ? '#EB5757' : '#21094A' }"
           >
             {{ item.productCount }}
@@ -368,16 +525,12 @@ const handleGoTOAction = ({ uuid }, action) => {
 
       <template v-slot:item.visibility="{ item }">
         <div class="d-flex">
-          <p class="mx-auto green--tag px-2 py-1 text-subtitle-1">
+          <p
+            class="mx-auto px-2 py-1 text-subtitle-1"
+            style="border-radius: 8px"
+            :style="`background-color: ${getStyleStatus(item.visibility)?.background}; color: ${getStyleStatus(item.visibility)?.color}`"
+          >
             {{ item.visibility }}
-          </p>
-        </div>
-      </template>
-
-      <template v-slot:item.dateCreated="{ item }">
-        <div class="d-flex">
-          <p class="px-2 py-1 text-subtitle-1">
-            {{ dateFormattinmg(item.dateCreated) }}
           </p>
         </div>
       </template>
@@ -390,11 +543,19 @@ const handleGoTOAction = ({ uuid }, action) => {
           </p>
         </div>
       </template>
+      <template v-slot:item.totalAmount="{ item }">
+        <div class="d-flex">
+          <p class="price text-subtitle-1">
+            KD
+            {{ item.totalAmount }}
+          </p>
+        </div>
+      </template>
 
       <template v-slot:item.stockQuantity="{ item }">
         <div class="d-flex">
           <p
-            class="QTY text-subtitle-1"
+            class="QTY product text-subtitle-1"
             :class="item.stockQuantity <= 10 ? 'low' : ''"
           >
             {{ item.stockQuantity }}
@@ -410,6 +571,14 @@ const handleGoTOAction = ({ uuid }, action) => {
         </div>
       </template>
 
+      <template v-slot:item.permissions="{ item }">
+        <!-- <div class="d-flex"> -->
+        <p class="product text-subtitle-1">
+          {{ item.permissions }} Permissions
+        </p>
+        <!-- </div> -->
+      </template>
+
       <template v-slot:item.categoryName="{ item }">
         <div class="d-flex align-center justify-center">
           <p class="category text-subtitle-1">
@@ -417,9 +586,25 @@ const handleGoTOAction = ({ uuid }, action) => {
           </p>
         </div>
       </template>
+      <template v-slot:item.category="{ item }">
+        <div class="d-flex align-center justify-center">
+          <p
+            style="
+              color: var(--Black, #21094a);
+              font-family: Roboto;
+              font-size: 14px;
+              font-style: normal;
+              font-weight: 400;
+              line-height: 150%;
+            "
+          >
+            {{ item.category }}
+          </p>
+        </div>
+      </template>
       <template v-slot:item.displayName_En="{ item }">
-        <div class="d-flex align-center">
-          <div v-if="item.imagePath || item.images.length">
+        <div class="d-flex align-center justify-start">
+          <div v-if="item?.imagePath || item?.images?.length">
             <img
               style="width: 38px; height: 38px"
               :src="`https://techify-001-site1.htempurl.com${item.imagePath ? item.imagePath : item.images[0]?.imagePath}`"
@@ -431,12 +616,114 @@ const handleGoTOAction = ({ uuid }, action) => {
           </p>
         </div>
       </template>
+      <template v-slot:item.CustomerName="{ item }">
+        <div class="d-flex align-center justify-start">
+          <div>
+            <img
+              style="width: 38px; height: 38px"
+              src="@/assets/test-avatar.png"
+              alt="product"
+            />
+          </div>
+          <p class="product text-subtitle-1 ml-2">
+            {{ item.CustomerName }}
+          </p>
+        </div>
+      </template>
+      <template v-slot:item.Product="{ item }">
+        <div class="d-flex align-center justify-start">
+          <div>
+            <img
+              style="width: 38px; height: 38px"
+              src="@/assets/test-avatar.png"
+              alt="product"
+            />
+          </div>
+          <p class="product text-subtitle-1 ml-2">
+            {{ item.Product }}
+          </p>
+        </div>
+      </template>
+      <template v-slot:item.Rating="{ item }">
+        <div class="d-flex align-center justify-start">
+          <Ratings
+            :numnerOfStars="Math.floor(item.Rating)"
+            :numnerOfhalfStars="item.Rating % 1 != 0 ? 1 : 0"
+          />
+        </div>
+      </template>
+      <template v-slot:item.users="{ item }">
+        <div class="d-flex align-center justify-center">
+          <div
+            v-if="item?.imagePath || item?.images?.length"
+            class="d-flex align-center"
+          >
+            <img
+              v-for="image in item.images"
+              style="
+                width: 28px;
+                height: 30px;
+                border-radius: 50%;
+                margin-left: -15px;
+              "
+              :src="`${image.imagePath}`"
+              alt="product"
+            />
+            <span
+              v-if="item?.images?.length > 3"
+              class="text-subtitle-1 ml-2 product"
+              style="color: #733ee4"
+            >
+              +{{ item?.images?.length - 3 }}</span
+            >
+          </div>
+        </div>
+      </template>
+
+      <template v-slot:item.items="{ item }">
+        <div
+          v-for="(product, i) in item.items"
+          class="d-flex align-center justify-center"
+        >
+          <section class="d-flex align-center justify-center" v-if="i == 0">
+            <img
+              v-if="product?.productImagePath"
+              style="
+                width: 28px;
+                height: 30px;
+                border-radius: 50%;
+                margin-left: -15px;
+              "
+              :src="`https://techify-001-site1.htempurl.com${product.productImagePath}`"
+              alt="product"
+            />
+            <span class="product text-subtitle-1 ml-2">
+              {{ product.productDisplayName_En }}
+            </span>
+            <span
+              v-if="item.items.length > 1"
+              class="text-subtitle-1 ml-2 product"
+              style="color: #733ee4"
+            >
+              +{{ item.items.length - 1 }}</span
+            >
+          </section>
+        </div>
+      </template>
 
       <template v-slot:item.Customer="{ item }">
         <div class="d-flex align-center">
           <img src="@/assets/test-avatar.png" alt="avatar" />
           <p class="product text-subtitle-1 ml-2">
             {{ item.Customer }}
+          </p>
+        </div>
+      </template>
+
+      <template v-slot:item.userFullName="{ item }">
+        <div class="d-flex align-center justify-center">
+          <p class="product text-subtitle-1 ml-2">
+            {{ item.userFullName }}
           </p>
         </div>
       </template>
@@ -465,11 +752,28 @@ const handleGoTOAction = ({ uuid }, action) => {
         </div>
       </template>
 
+      <template v-slot:item.paymentMethod="{ item }">
+        <div class="d-flex justify-center align-center" style="gap: 0.5rem">
+          <SvgIcon :icon="item.paymentMethod" />
+          <p class="SKU text-subtitle-1">
+            {{ item.paymentMethod }}
+          </p>
+        </div>
+      </template>
+
+      <template v-slot:item.ReviewDate="{ item }">
+        <div class="d-flex justify-center">
+          <p class="SKU text-subtitle-1">
+            {{ item.ReviewDate }}
+          </p>
+        </div>
+      </template>
+
       <template v-slot:item.Payment="{ item }">
         <div class="d-flex justify-center align-center" style="gap: 0.5rem">
           <SvgIcon :icon="item.paymentMethod" />
           <p class="SKU text-subtitle-1">
-            {{ item.Payment }}
+            {{ item.paymentMethod }}
           </p>
         </div>
       </template>
@@ -478,8 +782,6 @@ const handleGoTOAction = ({ uuid }, action) => {
         <div class="d-flex justify-center">
           <VSelect
             :items="orderStatus"
-            item-title="nameEn"
-            item-value="nameEn"
             v-model="item.Status"
             density="compact"
             class="pa-0 w-100 pl-2 pb-1"
@@ -497,9 +799,19 @@ const handleGoTOAction = ({ uuid }, action) => {
       </template>
 
       <template v-slot:item.status="{ item }">
-        <div class="d-flex">
-          <p
-            class="px-2 py-1 text-subtitle-1 mx-auto"
+        <div
+          class="d-flex justify-center"
+          v-if="item?.items?.length > 0"
+          @click.stop
+        >
+          <VSelect
+            :items="nextStatus(item.statusLocalized)"
+            v-model="item.statusLocalized"
+            @update:modelValue="updateOrderStatus(item)"
+            density="compact"
+            class="pa-0 w-100 pl-2 pb-1"
+            variant="plain"
+            hide-details
             style="
               max-width: 150px;
               font-size: 12px;
@@ -507,17 +819,47 @@ const handleGoTOAction = ({ uuid }, action) => {
               border-radius: 8px;
             "
             :style="`background-color: ${getStyleStatus(item.status)?.background}; color: ${getStyleStatus(item.status)?.color}`"
+          />
+        </div>
+        <div class="d-flex" v-else>
+          <p
+            class="px-5 py-1 text-subtitle-1 mx-auto"
+            style="font-size: 12px; border-radius: 8px"
+            :style="`background-color: ${getStyleStatus(item.status)?.background}; color: ${getStyleStatus(item.status)?.color}`"
           >
             {{ item.status }}
           </p>
         </div>
       </template>
 
+      <template v-slot:item.notificationActions="{ item, index }">
+        <div v-if="index % 2 === 0">
+          <v-divider />
+        </div>
+        <div v-else class="d-flex">
+          <p
+            style="
+              color: var(--Lite, #afaacb);
+              text-align: center;
+              font-family: Roboto;
+              font-size: 16px;
+              font-style: normal;
+              font-weight: 500;
+              line-height: 150%;
+            "
+            class="my-auto me-2"
+          >
+            Send
+          </p>
+          <svgIcon icon="Send-icon" class="my-auto" />
+        </div>
+      </template>
+
       <template v-slot:item.actions="{ item }">
         <v-menu>
           <template v-slot:activator="{ props }">
-            <v-btn flat v-bind="props">
-              <v-icon>mdi-dots-horizontal </v-icon>
+            <v-btn flat v-bind="props" color="transparent">
+              <v-icon>mdi-dots-horizontal</v-icon>
             </v-btn>
           </template>
           <v-list>
@@ -569,15 +911,70 @@ const handleGoTOAction = ({ uuid }, action) => {
           </v-list>
         </v-menu>
       </template>
+
+      <template v-slot:item.promotion-actions="{ item }">
+        <v-menu>
+          <template v-slot:activator="{ props }">
+            <v-btn flat v-bind="props" color="transparent">
+              <v-icon>mdi-dots-horizontal</v-icon>
+            </v-btn>
+          </template>
+          <v-list>
+            <v-list-item class="px-0">
+              <v-btn
+                @click.stop="handleGoTOAction(item, 'edit')"
+                class="d-flex w-100 justify-start px-5"
+                flat
+              >
+                <svgIcon class="my-auto cursor-pointer me-2" icon="edit (1)" />
+                <p>Edit</p>
+              </v-btn>
+            </v-list-item>
+            <v-list-item class="px-0">
+              <v-btn
+                @click.stop="openDeleteModal(item)"
+                class="d-flex w-100 justify-start px-5"
+                flat
+              >
+                <svgIcon
+                  class="my-auto cursor-pointer me-2"
+                  icon="delete (1)"
+                />
+                <p>Delete</p>
+              </v-btn>
+            </v-list-item>
+            <v-list-item class="px-0">
+              <v-btn
+                class="d-flex w-100 justify-start px-5"
+                flat
+                @click.stop="handleGoTOAction(item, 'view')"
+              >
+                <svgIcon class="my-auto cursor-pointer me-2" icon="eye" />
+                <p>View Details</p>
+              </v-btn>
+            </v-list-item>
+            <v-list-item class="px-0" v-if="item.status !== 'active'">
+              <v-btn class="d-flex w-100 justify-start px-5" flat>
+                <svgIcon class="my-auto cursor-pointer me-2" icon="Change" />
+                <p>Renew AD</p>
+              </v-btn>
+            </v-list-item>
+            <v-list-item class="px-0" v-else>
+              <v-btn class="d-flex w-100 justify-start px-5" flat>
+                <svgIcon class="my-auto cursor-pointer me-2" icon="Hold" />
+                <p>Stop AD</p>
+              </v-btn>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+      </template>
     </v-data-table>
   </div>
 </template>
 
 <style>
-.green--tag {
-  color: #27ae60;
-  background-color: rgba(39, 174, 96, 0.1);
-  border-radius: 8px;
+.bg-f1ecfc {
+  background-color: #f1ecfc;
 }
 .price {
   color: #21094a;
@@ -628,20 +1025,28 @@ const handleGoTOAction = ({ uuid }, action) => {
   font-weight: 500;
 }
 
-.checkBox {
-  border-right: 1px #afaacb solid;
+.mdi-checkbox-blank-outline {
+  color: #d4d5dc;
 }
 
-.listin-table {
+.mdi-checkbox-marked {
+  color: #733ee4;
+}
+
+.listing-table {
   border-radius: 8px;
 }
 
-.listin-table thead tr:first-child {
-  background-color: #9089b233;
+.listing-table thead tr:first-child {
+  background-color: #e9e7f0;
   color: #21094a;
 }
 
-.listin-table tr > td:first-child {
+.listing-table tr {
+  height: 64px;
+}
+
+.listing-table.showSelect tr > td:first-child {
   border-right: 1px solid #afaacb;
 }
 </style>

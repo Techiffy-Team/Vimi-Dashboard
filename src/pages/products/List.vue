@@ -1,10 +1,12 @@
 <script lang="ts" setup>
-import productsFilter from "@/constants/categoriesFilter";
-import { headers } from "@/constants/products";
-import { getProducts, deleteProduct } from "@/apis/products";
-import { getCtegories } from "@/apis/categories";
+import { headers, productFilter } from '@/constants/products';
+import { getProducts, deleteProduct } from '@/apis/products';
+import { getCtegories } from '@/apis/categories';
+import { useBuildQueryString } from '@/composables/UseBuildQueryString';
+import { debounce } from '@/helpers/debounce.ts';
 
 const selectedItems = ref([]);
+const { buildQueryString } = useBuildQueryString();
 
 const resetSelectedItems = () => {
   selectedItems.value = [];
@@ -13,7 +15,7 @@ const resetSelectedItems = () => {
 
 const modalOptions = ref({});
 const modalState = ref(false);
-const toggleDeleteModal = ({ uuid = "", options = {} }) => {
+const toggleDeleteModal = ({ uuid = '', options = {} }) => {
   modalOptions.value = options;
   modalState.value = !!Object.keys(options).length;
   uuid.length && selectedItems.value.push(uuid);
@@ -51,7 +53,14 @@ const deleteMultiple = async () => {
 
 const allProducts = ref([]);
 const allCategories: any = ref([]);
+
+const updateSearch = debounce((searchKey: any) => {
+  search.value = searchKey;
+  fetchProducts();
+}, 500);
+
 const getAllCategories = async () => {
+  isPageLoading.value = true;
   try {
     const {
       data: { data },
@@ -61,32 +70,26 @@ const getAllCategories = async () => {
     console.log(error);
   }
 };
-const getCategoryNameForProduct = () => {
-  // add category name to products based on category id
-  allProducts.value.forEach(
-    (product: { categoryUuid: string; categoryName: string }) => {
-      const category = allCategories.value.find(
-        (category: { uuid: string }) => category.uuid === product.categoryUuid
-      );
-      if (category) {
-        product.categoryName = category.displayName_En;
-      }
-    }
-  );
-};
 
 let totalCount = ref(0);
+let search = ref('');
 const isPageLoading = ref(false);
+const page = ref(1);
 
 async function fetchProducts() {
   isPageLoading.value = true;
   try {
+    const params = buildQueryString({
+      rowCount: 10,
+      pageNo: page.value,
+      search: search.value,
+    });
     const {
       data: { data },
-    } = await getProducts();
+    } = await getProducts(params);
     allProducts.value = data.result;
     totalCount.value = data.totalCount;
-    getCategoryNameForProduct();
+    // getCategoryNameForProduct();
   } catch (error) {
     console.log(error);
   } finally {
@@ -100,13 +103,14 @@ const pagesCount = computed(() => {
     : Math.ceil(totalCount.value / 10);
 });
 
-const page = ref(1);
-const tableItems = computed(() => {
-  return allProducts.value.slice(10 * page.value - 10, 10 * page.value);
-});
 const getNextProductsPage = () => {
   page.value += 1;
+  fetchProducts();
 };
+
+watch(page, async () => {
+  fetchProducts();
+});
 
 watch(
   () => selectedItems.value,
@@ -117,6 +121,9 @@ watch(
     return setCheckAll(false);
   }
 );
+const handleCancel = () => {
+  toggleDeleteModal({});
+};
 onMounted(async () => {
   await getAllCategories();
   fetchProducts();
@@ -130,10 +137,11 @@ onMounted(async () => {
       addAction="Add Product"
       placeholder="Search , ID , SKU , Product name"
       pathName="add-product"
+      @updateSearch="updateSearch"
     />
     <tableFilters
       v-else
-      :filters="productsFilter"
+      :filters="productFilter"
       :triggerCheckAll="triggerCheckAll"
       @SelectAll="SelectAll"
       @CancelSellection="resetSelectedItems"
@@ -146,20 +154,22 @@ onMounted(async () => {
       @emitSelectedItems="selectedItems = $event"
       @openDeleteModal="toggleDeleteModal"
       @edit="$router.push({ name: 'edit-product', params: { id: $event } })"
+      :triggerResetSelectedItems="triggerResetSelectedItems"
       :triggerSelectAll="triggerSelectAll"
       :routeDir="'product'"
       :itemValue="'uuid'"
       class="my-6"
       :headers="headers"
       :isPageLoading="isPageLoading"
-      :items="tableItems"
+      :items="allProducts"
     />
-    <div class="w-100">
+    <div class="w-100 d-flex justify-space-between">
       <p class="my-auto text-9089B2">
         View
-        {{ tableItems.length }} from {{ totalCount }}
+        {{ allProducts.length }} from {{ totalCount }}
       </p>
       <v-pagination
+        v-if="pagesCount > 1 && !isPageLoading"
         v-model="page"
         :length="pagesCount"
         @change="getNextProductsPage"
@@ -169,8 +179,8 @@ onMounted(async () => {
       :options="modalOptions"
       :modalState="modalState"
       :isDeletionInProgress="isDeletionInProgress"
-      @closeModal="toggleDeleteModal"
-      @deleteItem="deleteMultiple"
+      :onCancel="handleCancel"
+      :onConfirm="deleteMultiple"
     />
   </div>
 </template>
